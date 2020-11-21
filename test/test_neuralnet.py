@@ -37,5 +37,5 @@ class NeuralNetTestCase(unittest.TestCase):
         self.assertEqual(len(outputs.shape), 1) # check if returns a vector, not a matrix
         self.assertEqual(outputs.shape[0], nn.layer_sizes[-1]) # check shape of the vector against the layer
 
-        cost = NeuralNet.cost_func(outputs, self.sig_cosh[training_data_index])
+        cost = NeuralNet.cost_feed(outputs, self.sig_cosh[training_data_index])
         print(cost)

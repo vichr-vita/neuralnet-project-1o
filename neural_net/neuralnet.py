@@ -73,9 +73,9 @@ class NeuralNet:
         return a
 
     @staticmethod
-    def cost_func(output_vec: np.ndarray, desired_output_vec: np.ndarray) -> float:
+    def cost_feed(output_vec: np.ndarray, desired_output_vec: np.ndarray) -> float:
         """
-        return a value of the cost function
+        return a the cost of one feed
 
         output_vec: output of the network
         desired_output_vec: correct output
