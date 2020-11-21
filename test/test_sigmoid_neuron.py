@@ -9,4 +9,3 @@ class PerceptronTestCase(unittest.TestCase):
                         [random.choice([0, 1]) for n in range(3)],
                         threshold=4
                         )
-        print(p.output)
