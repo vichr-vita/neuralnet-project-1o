@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 class NeuralNetException(Exception):
     pass
@@ -107,6 +108,10 @@ class NeuralNet:
 
 
     def get_cost_gradient(self, input_vec: np.ndarray, desired_output_vec: np.ndarray) -> tuple:
+        """
+        backpropagation
+        return dict of weights and biases gradients and MSE for one forward feed
+        """
         w_grad = [np.zeros(w.shape) for w in self.weights]
         b_grad = [np.zeros(b.shape) for b in self.biases]
 
@@ -123,7 +128,11 @@ class NeuralNet:
             delta = np.dot(self.weights[-i+1].T, delta) * NeuralNet.sigmoid_prime(z)
             w_grad[-i] = np.dot(delta[..., None], self.a_list[-i-1][None, ...])
             b_grad[-i] = delta
-        return (w_grad, b_grad)
+        return {
+                'w grad': w_grad,
+                'b grad': b_grad,
+                'mse': NeuralNet.cost_feed(self.a_list[-1], desired_output_vec)
+                }
 
 
     @staticmethod
@@ -131,6 +140,53 @@ class NeuralNet:
         return 2*(output_vec - desired_output_vec)
 
 
-    def update_weights_and_biases(self, inputs: np.ndarray, desired_outputs: np.ndarray, learning_rate: float) -> None:
-        # TODO: left here
-        pass
+    def update_weights_and_biases(self, batch, learning_rate: float) -> None:
+        """
+        calculate gradient of weights and biases for each input in a batch and add the total average gradient
+        scaled by learning rate to the current weights and biases of the network
+
+        return average MSE for this batch
+
+        batch: list:    [(input, desired_output),
+                        (input, desired_output)
+                        .
+                        .
+                        .
+                        (input, desired_output)]
+        """
+        # TODO: check if inputs and outputs are the same length and are vectors
+
+        if not 0 <= learning_rate <= 1:
+            raise NeuralNetException(f'learing rate {learning_rate} should be in [0, 1]')
+        
+
+        w_grad = [np.zeros(w.shape) for w in self.weights]
+        b_grad = [np.zeros(b.shape) for b in self.biases]
+
+        # calculate desired changes for each feed
+        mse = 0.00
+        for i, d_o in batch:
+            # check if i and d_o are both vectors of the same length
+            if i.shape != d_o.shape:
+                raise NeuralNetException(f'{i.shape} is not the same as {d_o.shape}')
+            cost_delta_grad_dict = self.get_cost_gradient(i, d_o)
+            w_grad = [gw+dgw for gw, dgw in zip(w_grad, cost_delta_grad_dict['w grad'])]
+            b_grad = [gb+dgb for gb, dgb in zip(b_grad, cost_delta_grad_dict['b grad'])]
+            mse += cost_delta_grad_dict['mse']
+        
+        # update the network len(inputs) == len(desired_outputs)
+        self.weights = [w-(learning_rate/len(batch))*nw for w, nw in zip(self.weights, w_grad)]
+        self.biases = [b-(learning_rate/len(batch))*nb for b, nb in zip(self.biases, b_grad)]
+        return mse/len(batch)
+
+    def learn(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float):
+        """
+        """
+        for e in range(no_epochs):
+            random.shuffle(labeled_training_dataset)
+            mini_batches = [labeled_training_dataset[i:i+mini_batch_size] for i in range(0, len(labeled_training_dataset), mini_batch_size)]
+            mse = 0.00
+            for batch in mini_batches:
+                mse += self.update_weights_and_biases(batch, learning_rate)
+            mse = mse/len(mini_batches)
+            print(f'E: {e} | mse: {mse}')
