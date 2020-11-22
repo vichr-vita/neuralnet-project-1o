@@ -58,7 +58,7 @@ class NeuralNetTestCase(unittest.TestCase):
             self.assertEqual(gb.shape, b.shape)
     
     def test_network_wb_update(self):
-        nn.update(inputs, desired_outputs, learning_rate)
+        nn.update_weights_and_biases(inputs, desired_outputs, learning_rate)
 
 if __name__ == '__main__':
     unittest.main()
