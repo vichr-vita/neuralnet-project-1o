@@ -4,6 +4,7 @@ class NeuralNetException(Exception):
     pass
 
 class NeuralNet:
+
     def __init__(self, layer_sizes: list, initialize=True) -> None:
         self.layer_sizes = layer_sizes
         self.biases = [np.zeros(x) for x in self.layer_sizes[1:]] # input layer doesn't have a bias
@@ -14,6 +15,7 @@ class NeuralNet:
         if initialize:
             self.initialize_weights()
             self.initialize_biases()
+
 
     def initialize_weights(self, type=None):
         """
@@ -37,6 +39,7 @@ class NeuralNet:
         """
         return 1 / (1 + np.exp(-z))
 
+
     @staticmethod
     def sigmoid_inv(sig: np.ndarray) -> np.ndarray:
         """
@@ -46,12 +49,14 @@ class NeuralNet:
         """
         return np.log(sig / (1 - sig))
 
+
     @staticmethod
     def sigmoid_prime(z):
         """
         return first derivative of the sigmoid function with respect to z
         """
         return NeuralNet.sigmoid(z)*(1-NeuralNet.sigmoid(z))
+
 
     @staticmethod
     def z_func(a: np.ndarray, w: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -66,6 +71,7 @@ class NeuralNet:
         if type(a) is not np.ndarray:
             raise TypeError(type(a), 'is not', np.ndarray)
         return np.dot(w, a) + b
+
 
     def feed_forward(self, input_vec: np.ndarray) -> np.ndarray:
         """
@@ -85,6 +91,7 @@ class NeuralNet:
             self.a_list.append(a)
         return a # final output layer
 
+
     @staticmethod
     def cost_feed(output_vec: np.ndarray, desired_output_vec: np.ndarray) -> float:
         """
@@ -95,9 +102,11 @@ class NeuralNet:
 
         shapes of the vectors are to be the same
         """
+        # TODO might not use
         return np.sum(np.power(output_vec - desired_output_vec, 2))
 
-    def get_cost_gradient(self, input_vec: np.ndarray, desired_output_vec: np.ndarray):
+
+    def get_cost_gradient(self, input_vec: np.ndarray, desired_output_vec: np.ndarray) -> tuple:
         w_grad = [np.zeros(w.shape) for w in self.weights]
         b_grad = [np.zeros(b.shape) for b in self.biases]
 
@@ -116,7 +125,12 @@ class NeuralNet:
             b_grad[-i] = delta
         return (w_grad, b_grad)
 
-    
+
     @staticmethod
     def cost_partial_derivative_to_a(output_vec, desired_output_vec):
         return 2*(output_vec - desired_output_vec)
+
+
+    def update_weights_and_biases(self, inputs: np.ndarray, desired_outputs: np.ndarray, learning_rate: float) -> None:
+        # TODO: left here
+        pass
