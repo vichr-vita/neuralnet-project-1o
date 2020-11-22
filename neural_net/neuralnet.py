@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import pickle
 
 class NeuralNetException(Exception):
     pass
@@ -9,8 +10,6 @@ class NeuralNet:
     def __init__(self, layer_sizes: list, initialize=True) -> None:
         self.layer_sizes = layer_sizes
         self.biases = [np.zeros(x) for x in self.layer_sizes[1:]] # input layer doesn't have a bias
-
-        # weight of Layer n is indexed as self.weights[n-1][to neuron of L n][from neuron of L n-1]
         self.weights = [np.zeros(el) for el in zip(self.layer_sizes[1:], self.layer_sizes[:-1])]
 
         if initialize:
@@ -25,12 +24,28 @@ class NeuralNet:
         """
         self.weights = [np.random.randn(*w.shape) for w in self.weights]
 
+
     def initialize_biases(self, type=None):
         """
         initialize biases in the network to a random number
         TODO: choose the initialization method in the future
         """
         self.biases = [np.random.randn(*b.shape) for b in self.biases]
+
+    def dump(self, path):
+        """
+        save the network to file
+        """
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load(path):
+        """
+        load the network from file
+        """
+        with open(path, 'rb') as f:
+            return pickle.load(f)
 
 
     @staticmethod
@@ -181,6 +196,7 @@ class NeuralNet:
 
     def learn(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float):
         """
+        can yield intermediate state of learning for testing/serializing
         """
         for e in range(no_epochs):
             random.shuffle(labeled_training_dataset)
@@ -189,4 +205,8 @@ class NeuralNet:
             for batch in mini_batches:
                 mse += self.update_weights_and_biases(batch, learning_rate)
             mse = mse/len(mini_batches)
-            print(f'E: {e} | mse: {mse}')
+            yield {
+                'epoch': e,
+                'mse': mse,
+                'state': self
+            }

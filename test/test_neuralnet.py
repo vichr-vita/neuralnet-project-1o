@@ -82,15 +82,30 @@ class NeuralNetTestCase(unittest.TestCase):
 
     
     def test_learning(self):
-        inputs = [np.random.randn(4) for i in range(10000)]
-        desired_outputs = [np.random.randn(4) for i in range(10000)]
+        inputs = [np.random.randn(4) for i in range(100)]
+        desired_outputs = [np.random.randn(4) for i in range(100)]
         sig_inputs = [NeuralNet.sigmoid(i) for i in inputs]
         sig_desired_outputs = [NeuralNet.sigmoid(o) for o in desired_outputs]
         training_data = [(i, o) for i, o in zip(sig_inputs, sig_desired_outputs)]
 
-        layer_sizes = [len(inputs[0]), 3, len(desired_outputs[0])]
+        layer_sizes = [len(inputs[0]), 50, len(desired_outputs[0])]
         nn = NeuralNet(layer_sizes=layer_sizes)
-        nn.learn(labeled_training_dataset=training_data, no_epochs=1000, mini_batch_size=1000, learning_rate=.05)
+        nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=1000, learning_rate=.05) # can yield intermediate values
+
+    def test_serialization(self):
+        inputs = [np.random.randn(4) for i in range(10)]
+        desired_outputs = [np.random.randn(4) for i in range(10)]
+        sig_inputs = [NeuralNet.sigmoid(i) for i in inputs]
+        sig_desired_outputs = [NeuralNet.sigmoid(o) for o in desired_outputs]
+        training_data = [(i, o) for i, o in zip(sig_inputs, sig_desired_outputs)]
+
+        layer_sizes = [len(inputs[0]), 50, len(desired_outputs[0])]
+        nn = NeuralNet(layer_sizes=layer_sizes)
+        nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=5, learning_rate=.05) # can yield intermediate values
+
+    def test_deserialization(self):
+        nn = NeuralNet.load('test/resources/testnn.save')
+
 
 if __name__ == '__main__':
     unittest.main()
