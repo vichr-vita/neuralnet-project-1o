@@ -1,5 +1,4 @@
 import numpy as np
-from numpy.core.fromnumeric import transpose
 
 class NeuralNetException(Exception):
     pass
@@ -103,13 +102,6 @@ class NeuralNet:
         b_grad = [np.zeros(b.shape) for b in self.biases]
 
         a = input_vec
-        # a_list = [a]
-        # z_list = []
-        # for w, b in zip(self.weights, self.biases):
-        #     z = NeuralNet.z_func(a, w, b)
-        #     z_list.append(z)
-        #     a = NeuralNet.sigmoid(z)
-        #     a_list.append(a)
 
         self.feed_forward(a)
         
