@@ -22,8 +22,8 @@ class NeuralNetTestCase(unittest.TestCase):
         self.assertTrue(len(nn.biases) == len(nn.layer_sizes) - 1)
         for b, s in zip(nn.biases, nn.layer_sizes[1:]):
             self.assertEqual(len(b), s)
-        nn.initialize_weights()
-        nn.initialize_biases()
+        nn._initialize_weights()
+        nn._initialize_biases()
         # print(nn.weights)
 
         wrong_type = 3
@@ -42,7 +42,6 @@ class NeuralNetTestCase(unittest.TestCase):
         self.assertEqual(outputs.shape[0], nn.layer_sizes[-1]) # check shape of the vector against the layer
 
         cost = NeuralNet.cost_feed(outputs, sig_cosh[training_data_index])
-        # print(cost)
 
     def test_backpropagation(self):
         x = np.linspace(-4, 4, 1000)
@@ -52,7 +51,7 @@ class NeuralNetTestCase(unittest.TestCase):
         sig_cosh = [np.array([NeuralNet.sigmoid(n), NeuralNet.sigmoid(n**2)]) for n in cosh]
         nn = NeuralNet(layer_sizes=[len(sig_x[0]), 3, 4, len(sig_cosh[0])]) # first layer created to match the input size
         training_data_index = np.random.randint(0, len(sig_x)) # random input from the data set
-        d_grad_dict = nn.get_cost_gradient(sig_x[training_data_index], sig_cosh[training_data_index])
+        d_grad_dict = nn._get_cost_gradient(sig_x[training_data_index], sig_cosh[training_data_index])
 
         for gw, w in zip(d_grad_dict['w grad'], nn.weights):
             self.assertEqual(gw.shape, w.shape)
@@ -72,7 +71,7 @@ class NeuralNetTestCase(unittest.TestCase):
 
         old_shapes_w = [w.shape for w in nn.weights]
         old_shapes_b = [b.shape for b in nn.biases]
-        mse = nn.update_weights_and_biases(batch, learning_rate)
+        mse = nn._update_weights_and_biases(batch, learning_rate)
         new_shapes_w = [w.shape for w in nn.weights]
         new_shapes_b = [b.shape for b in nn.biases]
 
@@ -90,21 +89,22 @@ class NeuralNetTestCase(unittest.TestCase):
 
         layer_sizes = [len(inputs[0]), 50, len(desired_outputs[0])]
         nn = NeuralNet(layer_sizes=layer_sizes)
-        nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=1000, learning_rate=.05) # can yield intermediate values
+        nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=10, learning_rate=.05) # can yield intermediate values
 
     def test_serialization(self):
-        inputs = [np.random.randn(4) for i in range(10)]
-        desired_outputs = [np.random.randn(4) for i in range(10)]
+        inputs = [np.random.randn(4) for i in range(100)]
+        desired_outputs = [np.random.randn(4) for i in range(100)]
         sig_inputs = [NeuralNet.sigmoid(i) for i in inputs]
         sig_desired_outputs = [NeuralNet.sigmoid(o) for o in desired_outputs]
         training_data = [(i, o) for i, o in zip(sig_inputs, sig_desired_outputs)]
 
         layer_sizes = [len(inputs[0]), 50, len(desired_outputs[0])]
         nn = NeuralNet(layer_sizes=layer_sizes)
-        nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=5, learning_rate=.05) # can yield intermediate values
+        nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=10, learning_rate=.05) # can yield intermediate values
 
     def test_deserialization(self):
         nn = NeuralNet.load('test/resources/testnn.save')
+
 
 
 if __name__ == '__main__':

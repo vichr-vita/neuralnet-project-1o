@@ -13,11 +13,11 @@ class NeuralNet:
         self.weights = [np.zeros(el) for el in zip(self.layer_sizes[1:], self.layer_sizes[:-1])]
 
         if initialize:
-            self.initialize_weights()
-            self.initialize_biases()
+            self._initialize_weights()
+            self._initialize_biases()
 
 
-    def initialize_weights(self, type=None):
+    def _initialize_weights(self, type=None):
         """
         initialize weights in the network to a random number
         TODO: choose the initialization method in the future
@@ -25,7 +25,7 @@ class NeuralNet:
         self.weights = [np.random.randn(*w.shape) for w in self.weights]
 
 
-    def initialize_biases(self, type=None):
+    def _initialize_biases(self, type=None):
         """
         initialize biases in the network to a random number
         TODO: choose the initialization method in the future
@@ -118,11 +118,10 @@ class NeuralNet:
 
         shapes of the vectors are to be the same
         """
-        # TODO might not use
         return np.sum(np.power(output_vec - desired_output_vec, 2))
 
 
-    def get_cost_gradient(self, input_vec: np.ndarray, desired_output_vec: np.ndarray) -> tuple:
+    def _get_cost_gradient(self, input_vec: np.ndarray, desired_output_vec: np.ndarray) -> tuple:
         """
         backpropagation
         return dict of weights and biases gradients and MSE for one forward feed
@@ -155,7 +154,7 @@ class NeuralNet:
         return 2*(output_vec - desired_output_vec)
 
 
-    def update_weights_and_biases(self, batch, learning_rate: float) -> None:
+    def _update_weights_and_biases(self, batch, learning_rate: float) -> float:
         """
         calculate gradient of weights and biases for each input in a batch and add the total average gradient
         scaled by learning rate to the current weights and biases of the network
@@ -184,17 +183,16 @@ class NeuralNet:
             # check if i and d_o are both vectors of the same length
             if i.shape != d_o.shape:
                 raise NeuralNetException(f'{i.shape} is not the same as {d_o.shape}')
-            cost_delta_grad_dict = self.get_cost_gradient(i, d_o)
+            cost_delta_grad_dict = self._get_cost_gradient(i, d_o)
             w_grad = [gw+dgw for gw, dgw in zip(w_grad, cost_delta_grad_dict['w grad'])]
             b_grad = [gb+dgb for gb, dgb in zip(b_grad, cost_delta_grad_dict['b grad'])]
             mse += cost_delta_grad_dict['mse']
         
-        # update the network len(inputs) == len(desired_outputs)
         self.weights = [w-(learning_rate/len(batch))*nw for w, nw in zip(self.weights, w_grad)]
         self.biases = [b-(learning_rate/len(batch))*nb for b, nb in zip(self.biases, b_grad)]
         return mse/len(batch)
 
-    def learn(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float):
+    def gradient_descent(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float) -> dict:
         """
         can yield intermediate state of learning for testing/serializing
         """
@@ -203,10 +201,19 @@ class NeuralNet:
             mini_batches = [labeled_training_dataset[i:i+mini_batch_size] for i in range(0, len(labeled_training_dataset), mini_batch_size)]
             mse = 0.00
             for batch in mini_batches:
-                mse += self.update_weights_and_biases(batch, learning_rate)
+                mse += self._update_weights_and_biases(batch, learning_rate)
             mse = mse/len(mini_batches)
             yield {
                 'epoch': e,
                 'mse': mse,
                 'state': self
             }
+
+    def learn(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float):
+        for epoch_dict in self.gradient_descent(labeled_training_dataset, no_epochs, mini_batch_size, learning_rate):
+            print('EPOCH:\t{}\tMSE: {}'.format(epoch_dict['epoch'] + 1, epoch_dict['mse']), end='\r')
+            self.last_epoch = epoch_dict['epoch']
+            self.last_mse = epoch_dict['mse']
+        print()
+        print('DONE')
+
