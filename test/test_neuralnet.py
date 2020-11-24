@@ -1,9 +1,13 @@
 from typing import Type
 import numpy as np
 import unittest
+import warnings
+import itertools
+import json
 
 from numpy.core.arrayprint import _leading_trailing
 from neural_net.neuralnet import NeuralNet, NeuralNetException
+import neural_net.activation_functions as af
 
 class NeuralNetTestCase(unittest.TestCase):
 
@@ -15,10 +19,10 @@ class NeuralNetTestCase(unittest.TestCase):
         x = np.linspace(-4, 4, 1000)
         cosh = np.cosh(x)
         # make inputs the list of numpy arrays
-        sig_x = [np.array([NeuralNet.sigmoid(n)]) for n in x]
-        sig_cosh = [np.array([NeuralNet.sigmoid(n)]) for n in cosh]
-
-        nn = NeuralNet(layer_sizes=[len(sig_x[0]), 3, 4, 1], initialize=False) # first layer created to match the input size
+        sig_x = [np.array([af.sigmoid(n)]) for n in x]
+        sig_cosh = [np.array([af.sigmoid(n)]) for n in cosh]
+        layer_sizes=[len(sig_x[0]), 3, 4, 1]
+        nn = NeuralNet(layer_sizes=layer_sizes, a_functions=[af.sigmoid for n in layer_sizes[1:]], a_functions_prime=[af.sigmoid_prime for n in layer_sizes[1:]], initialize=False) # first layer created to match the input size
         self.assertTrue(len(nn.biases) == len(nn.layer_sizes) - 1)
         for b, s in zip(nn.biases, nn.layer_sizes[1:]):
             self.assertEqual(len(b), s)
@@ -35,9 +39,9 @@ class NeuralNetTestCase(unittest.TestCase):
         z = NeuralNet.z_func(sig_x[training_data_index], nn.weights[layer_no - 1], nn.biases[layer_no - 1])
         self.assertEqual(len(z.shape), 1) # check if returns a vector, not a matrix
         self.assertEqual(z.shape[0], nn.layer_sizes[layer_no]) # check shape of the vector agains the layer
-        self.assertTrue([0 <= x <= 1 for x in NeuralNet.sigmoid(z)]) # check sigmoid implementation
+        self.assertTrue([0 <= x <= 1 for x in af.sigmoid(z)]) # check sigmoid implementation
 
-        outputs = nn.feed_forward(sig_x[training_data_index])
+        outputs = nn.feed_forward(sig_x[training_data_index])['a']
         self.assertEqual(len(outputs.shape), 1) # check if returns a vector, not a matrix
         self.assertEqual(outputs.shape[0], nn.layer_sizes[-1]) # check shape of the vector against the layer
 
@@ -47,9 +51,10 @@ class NeuralNetTestCase(unittest.TestCase):
         x = np.linspace(-4, 4, 1000)
         cosh = np.cosh(x)
         # make inputs the list of numpy arrays
-        sig_x = [np.array([NeuralNet.sigmoid(n), NeuralNet.sigmoid(n**2)]) for n in x]
-        sig_cosh = [np.array([NeuralNet.sigmoid(n), NeuralNet.sigmoid(n**2)]) for n in cosh]
-        nn = NeuralNet(layer_sizes=[len(sig_x[0]), 3, 4, len(sig_cosh[0])]) # first layer created to match the input size
+        sig_x = [np.array([af.sigmoid(n), af.sigmoid(n**2)]) for n in x]
+        sig_cosh = [np.array([af.sigmoid(n), af.sigmoid(n**2)]) for n in cosh]
+        layer_sizes=[len(sig_x[0]), 3, 4, len(sig_cosh[0])]
+        nn = NeuralNet(layer_sizes=layer_sizes, a_functions=[af.sigmoid for n in layer_sizes[1:]], a_functions_prime=[af.sigmoid_prime for n in layer_sizes[1:]]) # first layer created to match the input size
         training_data_index = np.random.randint(0, len(sig_x)) # random input from the data set
         d_grad_dict = nn._get_cost_gradient(sig_x[training_data_index], sig_cosh[training_data_index])
 
@@ -61,13 +66,13 @@ class NeuralNetTestCase(unittest.TestCase):
     def test_network_wb_update(self):
         inputs = [np.random.randn(4) for i in range(100)]
         desired_outputs = [np.random.randn(4) for i in range(100)]
-        sig_inputs = [NeuralNet.sigmoid(i) for i in inputs]
-        sig_desired_outputs = [NeuralNet.sigmoid(o) for o in desired_outputs]
+        sig_inputs = [af.sigmoid(i) for i in inputs]
+        sig_desired_outputs = [af.sigmoid(o) for o in desired_outputs]
         learning_rate = .05
         batch = [(i, o) for i, o in zip(sig_inputs, sig_desired_outputs)]
 
         layer_sizes = [len(inputs[0]), 3, 4, len(desired_outputs[0])]
-        nn = NeuralNet(layer_sizes=layer_sizes)
+        nn = NeuralNet(layer_sizes=layer_sizes, a_functions=[af.sigmoid for n in layer_sizes[1:]], a_functions_prime=[af.sigmoid_prime for n in layer_sizes[1:]]) # first layer created to match the input size
 
         old_shapes_w = [w.shape for w in nn.weights]
         old_shapes_b = [b.shape for b in nn.biases]
@@ -81,29 +86,50 @@ class NeuralNetTestCase(unittest.TestCase):
 
     
     def test_learning(self):
-        inputs = [np.random.randn(4) for i in range(100)]
-        desired_outputs = [np.random.randn(4) for i in range(100)]
-        sig_inputs = [NeuralNet.sigmoid(i) for i in inputs]
-        sig_desired_outputs = [NeuralNet.sigmoid(o) for o in desired_outputs]
-        training_data = [(i, o) for i, o in zip(sig_inputs, sig_desired_outputs)]
+        x = [np.array([np.random.uniform(-1, 1)]) for i in range(1000)]
+        y = [np.cosh(n) for n in x]
+        training_data = [(x, y) for x, y in zip(x, y)]
 
-        layer_sizes = [len(inputs[0]), 50, len(desired_outputs[0])]
-        nn = NeuralNet(layer_sizes=layer_sizes)
+        layer_sizes = [1, 3, 1]
+        nn = NeuralNet(layer_sizes=layer_sizes, a_functions=[af.sigmoid, af.linear], a_functions_prime=[af.sigmoid_prime, af.linear_prime]) # first layer created to match the input size
         nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=10, learning_rate=.05) # can yield intermediate values
 
-    def test_serialization(self):
-        inputs = [np.random.randn(4) for i in range(100)]
-        desired_outputs = [np.random.randn(4) for i in range(100)]
-        sig_inputs = [NeuralNet.sigmoid(i) for i in inputs]
-        sig_desired_outputs = [NeuralNet.sigmoid(o) for o in desired_outputs]
-        training_data = [(i, o) for i, o in zip(sig_inputs, sig_desired_outputs)]
-
-        layer_sizes = [len(inputs[0]), 50, len(desired_outputs[0])]
-        nn = NeuralNet(layer_sizes=layer_sizes)
-        nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=10, learning_rate=.05) # can yield intermediate values
 
     def test_deserialization(self):
-        nn = NeuralNet.load('test/resources/testnn.save')
+        pass
+        # NeuralNet.load('test/resources/testnn.save') # deprecated, need update
+
+    def test_stat_learn(self):
+        
+        x = [np.array([np.random.uniform(-1, 1)]) for i in range(1000)]
+        y = [np.cosh(n) for n in x]
+
+        training_data = [(x, y) for x, y in zip(x, y)]
+        neurons = [10, 3, 1]
+        epochs = [10, 3]
+        learning_rates = [0.1, 0.05]
+
+        params = itertools.product(neurons, epochs, learning_rates)
+        stats = []
+        for p in params:
+            mse_list = []
+            nn = NeuralNet([1, p[0], 1], a_functions=[af.sigmoid, af.linear], a_functions_prime=[af.sigmoid_prime, af.linear_prime])
+            print(p, end='\n')
+            for e in nn.gradient_descent(labeled_training_dataset=training_data, no_epochs=p[1], mini_batch_size=1, learning_rate=p[2]):
+                print('EPOCH: {}\tmse: {}'.format(e['epoch'], e['mse']), end='\r')
+                mse_list.append(e['mse'])
+            result = {
+                'neurons': p[0],
+                'epochs': p[1],
+                'learning rate': p[2],
+                'mse list' : mse_list,
+                'last mse': mse_list[-1]
+            }
+            stats.append(result)
+            print(result)
+        stats_json = json.dumps(stats)
+        with open('test/resources/stats.json', 'w') as f:
+            f.write(stats_json)
 
 
 
