@@ -45,5 +45,9 @@ def step(z: np.ndarray) -> np.ndarray:
     return np.array([1 if x > 0 else 0 for x in z])
 
 
+def tanh(z: np.ndarray) -> np.ndarray:
+    return np.tanh(z)
+
+
 def tanh_prime(z: np.ndarray) -> np.ndarray:
     return 1/np.power(np.cosh(z), 2)

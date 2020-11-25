@@ -271,6 +271,6 @@ class NeuralNet:
         
         return (l_split[:int(len(l_split) * ratio)], l_split[int(len(l_split) * ratio):])
 
-
-def normalize(z: np.ndarray) -> np.ndarray:
-    return z * 1.0/z.max()
+    @staticmethod
+    def normalize(z: np.ndarray) -> np.ndarray:
+        return z * 1.0/z.max()

@@ -114,7 +114,7 @@ class NeuralNetTestCase(unittest.TestCase):
         print() # format so the print does not interfere with other test prints
         for p in params:
             mse_list = []
-            nn = NeuralNet([1, p[0], 1], a_functions=[af.sigmoid, af.linear], a_functions_prime=[af.sigmoid_prime, af.linear_prime])
+            nn = NeuralNet([1, p[0], 1], a_functions=[af.tanh, af.tanh], a_functions_prime=[af.tanh_prime, af.tanh_prime])
             print(p)
             for e in nn.gradient_descent_testdata(labeled_training_dataset=training_data, labeled_test_dataset=test_data, no_epochs=p[1], mini_batch_size=1, learning_rate=p[2]):
                 print('EPOCH: {}\ttest mse: {}'.format(e['epoch'], e['test mse']), end='\r')
