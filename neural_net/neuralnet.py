@@ -167,9 +167,6 @@ class NeuralNet:
         """
         # TODO: check if inputs and outputs are the same length and are vectors
 
-        if not 0 <= learning_rate <= 1:
-            raise NeuralNetException(f'learing rate {learning_rate} should be in [0, 1]')
-        
 
         w_grad = [np.zeros(w.shape) for w in self.weights]
         b_grad = [np.zeros(b.shape) for b in self.biases]
