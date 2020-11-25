@@ -208,7 +208,7 @@ class NeuralNet:
                 'state': self
             }
 
-    def gradient_descent(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float) -> dict:
+    def gradient_descent_testdata(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float) -> dict:
         """
         can yield intermediate state of learning for testing/serializing
         last mse
