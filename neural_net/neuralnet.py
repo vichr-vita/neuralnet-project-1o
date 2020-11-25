@@ -208,27 +208,41 @@ class NeuralNet:
                 'state': self
             }
 
-    def gradient_descent_testdata(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float) -> dict:
+    def gradient_descent_testdata(self, labeled_training_dataset: list, labeled_test_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float) -> dict:
         """
         can yield intermediate state of learning for testing/serializing
-        last mse
+        train_mse: last mse of learning epoch
+        test_mse: average mse for test feed
         """
         len_training_data = len(labeled_training_dataset)
+        len_test_data = len(labeled_test_dataset)
         for e in range(no_epochs):
             random.shuffle(labeled_training_dataset)
             mini_batches = [labeled_training_dataset[i:i+mini_batch_size]
                             for i in range(0, len_training_data, mini_batch_size)]
-            mse = 0.00
+            # train 
+            train_mse = 0.00 # TODO: this metric might not be necessary anymore, delete?
             for mini_batch in mini_batches:
-                mse = self._update_weights_and_biases(
+                train_mse = self._update_weights_and_biases(
                     mini_batch, learning_rate)
+
+
+            # evaluate
+            test_mse = 0.00
+            for i, do in labeled_test_dataset:
+                test_mse += self.feed_forward_performance(i, self.a_functions[-1](do))
             yield {
                 'epoch': e,
-                'mse': mse,
+                'train mse': train_mse,
+                'test mse': test_mse/len(labeled_test_dataset),
                 'state': self
             }
 
-    def learn(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float):
+    def learn(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float) -> None:
+        """
+        contained algorithm wrapping stochastic gradient descent
+        """
+        print('LEARN')
         for epoch_dict in self.gradient_descent(labeled_training_dataset, no_epochs, mini_batch_size, learning_rate):
             print('EPOCH:\t{}\tmse: {}'.format(
                 epoch_dict['epoch'] + 1, epoch_dict['mse']), end='\r')
@@ -237,6 +251,25 @@ class NeuralNet:
         self.mse_avg = self.mse_avg/no_epochs
         print()
         print('DONE')
+
+    def feed_forward_performance(self, input_vec: np.ndarray, desired_output_vec: np.ndarray) -> float:
+        """
+        return mse (TODO: implement for arbitrary error function) of one forward feed
+        """
+        output_vec = self.feed_forward(input_vec)['a']
+        return NeuralNet.cost_feed(output_vec, desired_output_vec)
+
+
+
+    @staticmethod 
+    def ratio_list_split(l_split: list, ratio: float) -> tuple:
+        """
+        splits the dataset for training and evaluation
+        """
+        if not 0 <= ratio <= 1:
+            raise ValueError('must be 0 <= ratio <= 1 is:', ratio)
+        
+        return (l_split[:int(len(l_split) * ratio)], l_split[int(len(l_split) * ratio):])
 
 
 def normalize(z: np.ndarray) -> np.ndarray:

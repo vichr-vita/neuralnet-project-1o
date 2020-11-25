@@ -92,44 +92,34 @@ class NeuralNetTestCase(unittest.TestCase):
 
         layer_sizes = [1, 3, 1]
         nn = NeuralNet(layer_sizes=layer_sizes, a_functions=[af.sigmoid, af.linear], a_functions_prime=[af.sigmoid_prime, af.linear_prime]) # first layer created to match the input size
+        print() # remove interference with other test prints (dots)
         nn.learn(labeled_training_dataset=training_data, no_epochs=10, mini_batch_size=10, learning_rate=.05) # can yield intermediate values
 
 
     def test_deserialization(self):
         pass
-        # NeuralNet.load('test/resources/testnn.save') # deprecated, need update
+        # NeuralNet.load('test/resources/testnn.save') # deprecated, TODO need update
 
-    def test_stat_learn(self):
-        
+    def test_eval(sefl):
         x = [np.array([np.random.uniform(-1, 1)]) for i in range(1000)]
         y = [np.cosh(n) for n in x]
 
-        training_data = [(x, y) for x, y in zip(x, y)]
-        neurons = [10, 3, 1]
+        training_data, test_data = NeuralNet.ratio_list_split([(x, y) for x, y in zip(x, y)], 0.75)
+        
+        neurons = [10, 3]
         epochs = [10, 3]
         learning_rates = [0.1, 0.05]
 
         params = itertools.product(neurons, epochs, learning_rates)
-        stats = []
+        print() # format so the print does not interfere with other test prints
         for p in params:
             mse_list = []
             nn = NeuralNet([1, p[0], 1], a_functions=[af.sigmoid, af.linear], a_functions_prime=[af.sigmoid_prime, af.linear_prime])
-            print(p, end='\n')
-            for e in nn.gradient_descent(labeled_training_dataset=training_data, no_epochs=p[1], mini_batch_size=1, learning_rate=p[2]):
-                print('EPOCH: {}\tmse: {}'.format(e['epoch'], e['mse']), end='\r')
-                mse_list.append(e['mse'])
-            result = {
-                'neurons': p[0],
-                'epochs': p[1],
-                'learning rate': p[2],
-                'mse list' : mse_list,
-                'last mse': mse_list[-1]
-            }
-            stats.append(result)
-            print(result)
-        stats_json = json.dumps(stats)
-        with open('test/resources/stats.json', 'w') as f:
-            f.write(stats_json)
+            print(p)
+            for e in nn.gradient_descent_testdata(labeled_training_dataset=training_data, labeled_test_dataset=test_data, no_epochs=p[1], mini_batch_size=1, learning_rate=p[2]):
+                print('EPOCH: {}\ttest mse: {}'.format(e['epoch'], e['test mse']), end='\r')
+                mse_list.append(e['test mse'])
+            print()
 
 
 
