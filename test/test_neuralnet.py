@@ -4,6 +4,7 @@ import unittest
 import warnings
 import itertools
 import json
+import csv
 
 from numpy.core.arrayprint import _leading_trailing
 from neural_net.neuralnet import NeuralNet, NeuralNetException
@@ -100,26 +101,88 @@ class NeuralNetTestCase(unittest.TestCase):
         pass
         # NeuralNet.load('test/resources/testnn.save') # deprecated, TODO need update
 
-    def test_eval(sefl):
+    def test_eval(self):
+        with open('resources/cruzeirodosul2010daily.csv', 'r') as f:
+            reader = csv.DictReader(f, delimiter=';')
+            avg_temps = np.array([l['AvgTemp'] for l in reader])
+            avg_temps = np.array([np.nan if l=='' else l for l in avg_temps], dtype='float64') # replace missing values with NaN
+        with open('resources/cruzeirodosul2010daily.csv', 'r') as f:
+            reader = csv.DictReader(f, delimiter=';')
+            dates = np.array([l['Date'] for l in reader], dtype='int64')
+            dates[0:5], avg_temps[0:5]
         x = [np.array([np.random.uniform(-1, 1)]) for i in range(1000)]
         y = [np.cosh(n) for n in x]
 
-        training_data, test_data = NeuralNet.ratio_list_split([(x, y) for x, y in zip(x, y)], 0.75)
-        
-        neurons = [10, 3]
-        epochs = [10, 3]
-        learning_rates = [0.1, 0.05]
+        norm_avg_temps = NeuralNet.normalize(avg_temps)
+        diff_norm_avg_temps = np.diff(norm_avg_temps)
 
+
+        dataset = [(np.array([x]), np.array([y])) for x, y in zip(dates[1:], diff_norm_avg_temps)]
+        training_data, test_data = NeuralNet.ratio_list_split(dataset, 0.75)
+
+        neurons = [10, 5, 3, 1]
+        epochs = [200]
+        learning_rates = [0.005, 0.05, 0.1, 0.5]
         params = itertools.product(neurons, epochs, learning_rates)
-        print() # format so the print does not interfere with other test prints
+        stats = []
         for p in params:
             mse_list = []
-            nn = NeuralNet([1, p[0], 1], a_functions=[af.tanh, af.tanh], a_functions_prime=[af.tanh_prime, af.tanh_prime])
-            print(p)
-            for e in nn.gradient_descent_testdata(labeled_training_dataset=training_data, labeled_test_dataset=test_data, no_epochs=p[1], mini_batch_size=1, learning_rate=p[2]):
+            nn = NeuralNet([1, p[0], 1], a_functions=[af.sigmoid, af.linear], a_functions_prime=[af.sigmoid_prime, af.linear_prime])
+            print(p, end='\n')
+            for e in nn.gradient_descent_testdata(
+                    labeled_training_dataset=training_data,
+                    labeled_test_dataset=test_data,
+                    no_epochs=p[1],
+                    mini_batch_size=1,
+                    learning_rate=p[2]
+                    ):
                 print('EPOCH: {}\ttest mse: {}'.format(e['epoch'], e['test mse']), end='\r')
                 mse_list.append(e['test mse'])
-            print()
+                if e['epoch'] + 1 in [5, 10, 50, 100]: # intermediate reults
+                    result = {
+                        'neurons': p[0],
+                        'epochs': e['epoch'] + 1,
+                        'learning rate': p[2],
+                        'mse list' : mse_list,
+                        'last mse': mse_list[-1]
+                    }
+                    stats.append(result)
+                    print()
+                    print('FINISHED epoch', e['epoch'])
+                if e['epoch'] == p[1] - 1: # last epoch
+                    result = {
+                        'neurons': p[0],
+                        'epochs': e['epoch'] + 1,
+                        'learning rate': p[2],
+                        'mse list' : mse_list,
+                        'last mse': mse_list[-1]
+                    }
+                    stats.append(result)
+                    print()
+                    print('FINISHED epoch', e['epoch'])
+                    print()
+        stats_json = json.dumps(stats)
+        with open('resources/stats_avgtemp.json', 'w') as f:
+            f.write(stats_json)
+
+
+
+
+
+        # neurons = [100, 3]
+        # epochs = [10, 3]
+        # learning_rates = [0.1, 0.05]
+
+        # params = itertools.product(neurons, epochs, learning_rates)
+        # print() # format so the print does not interfere with other test prints
+        # for p in params:
+        #     mse_list = []
+        #     nn = NeuralNet([1, p[0], 1], a_functions=[af.sigmoid, af.sigmoid], a_functions_prime=[af.sigmoid_prime, af.sigmoid_prime])
+        #     print(p)
+        #     for e in nn.gradient_descent_testdata(labeled_training_dataset=training_data, labeled_test_dataset=test_data, no_epochs=p[1], mini_batch_size=1, learning_rate=p[2]):
+        #         print('EPOCH: {}\ttest mse: {}'.format(e['epoch'], e['test mse']), end='\r')
+        #         mse_list.append(e['test mse'])
+        #     print()
 
 
 

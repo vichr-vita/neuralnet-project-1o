@@ -128,8 +128,7 @@ class NeuralNet:
 
         self.feed_forward(a)
 
-        delta = self.cost_partial_derivative_to_a(
-            self.a_list[-1], activated_desired_ov) * self.a_functions_prime[-1](self.z_list[-1])
+        delta = self.cost_partial_derivative_to_a(self.a_list[-1], activated_desired_ov) * self.a_functions_prime[-1](self.z_list[-1])
         w_grad[-1] = np.dot(delta[..., None], self.a_list[-2][None, ...])
         b_grad[-1] = delta
 
