@@ -10,6 +10,16 @@ from numpy.core.arrayprint import _leading_trailing
 from neural_net.neuralnet import NeuralNet, NeuralNetException
 import neural_net.activation_functions as af
 
+
+"""
+TODO investigate overflow of this hyperparameter combination
+(100, True, 0.5)
+
+/mnt/c/Users/ironl/MyCode/neuralnet-project-1o/neural_net/activation_functions.py:8: RuntimeWarning: overflow encountered in exp
+  return 1 / (1 + np.exp(-z))
+
+"""
+
 class NeuralNetTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -102,27 +112,29 @@ class NeuralNetTestCase(unittest.TestCase):
         # NeuralNet.load('test/resources/testnn.save') # deprecated, TODO need update
 
     def test_eval(self):
-        with open('resources/cruzeirodosul2010daily.csv', 'r') as f:
+        with open('test/resources/cruzeirodosul2010daily.csv', 'r') as f:
             reader = csv.DictReader(f, delimiter=';')
             avg_temps = np.array([l['AvgTemp'] for l in reader])
             avg_temps = np.array([np.nan if l=='' else l for l in avg_temps], dtype='float64') # replace missing values with NaN
-        with open('resources/cruzeirodosul2010daily.csv', 'r') as f:
+        with open('test/resources/cruzeirodosul2010daily.csv', 'r') as f:
             reader = csv.DictReader(f, delimiter=';')
-            dates = np.array([l['Date'] for l in reader], dtype='int64')
+            dates = np.array([l['Date'] for l in reader], dtype='int64') / 100_000
             dates[0:5], avg_temps[0:5]
-        x = [np.array([np.random.uniform(-1, 1)]) for i in range(1000)]
-        y = [np.cosh(n) for n in x]
+        # x = [np.array([np.random.uniform(-1, 1)]) for i in range(1000)]
+        # y = [np.cosh(n) for n in x]
+        # TODO posun data tak, at do neuronu nejdou obrovska cisla
 
-        norm_avg_temps = NeuralNet.normalize(avg_temps)
+        norm_avg_temps = NeuralNet.linear_interpolation(NeuralNet.normalize(avg_temps))
         diff_norm_avg_temps = np.diff(norm_avg_temps)
 
 
-        dataset = [(np.array([x]), np.array([y])) for x, y in zip(dates[1:], diff_norm_avg_temps)]
-        training_data, test_data = NeuralNet.ratio_list_split(dataset, 0.75)
+        dataset = [(np.array([x]), np.array([y])) for x, y in zip(dates[1:], diff_norm_avg_temps) if not np.isnan(y)]
+        print(len(dataset))
+        training_data, test_data = NeuralNet.ratio_list_split(dataset, 0.75) # TODO zjistit, proc pri velkem datasetu vyhazuje mse nan
 
-        neurons = [10, 5, 3, 1]
-        epochs = [200]
-        learning_rates = [0.005, 0.05, 0.1, 0.5]
+        neurons = [10]
+        epochs = [10]
+        learning_rates = [0.005, 0.05]
         params = itertools.product(neurons, epochs, learning_rates)
         stats = []
         for p in params:
@@ -138,8 +150,9 @@ class NeuralNetTestCase(unittest.TestCase):
                     ):
                 print('EPOCH: {}\ttest mse: {}'.format(e['epoch'], e['test mse']), end='\r')
                 mse_list.append(e['test mse'])
-                if e['epoch'] + 1 in [5, 10, 50, 100]: # intermediate reults
+                if e['test mse'] < 0.0001:
                     result = {
+                        'success': True,
                         'neurons': p[0],
                         'epochs': e['epoch'] + 1,
                         'learning rate': p[2],
@@ -148,9 +161,10 @@ class NeuralNetTestCase(unittest.TestCase):
                     }
                     stats.append(result)
                     print()
-                    print('FINISHED epoch', e['epoch'])
-                if e['epoch'] == p[1] - 1: # last epoch
+                    print('FOUND SUCCESS epoch', e['epoch'])
+                if e['epoch'] > 20: # last epoch
                     result = {
+                        'success': False,
                         'neurons': p[0],
                         'epochs': e['epoch'] + 1,
                         'learning rate': p[2],
@@ -159,10 +173,11 @@ class NeuralNetTestCase(unittest.TestCase):
                     }
                     stats.append(result)
                     print()
-                    print('FINISHED epoch', e['epoch'])
+                    print('FAILED MISERABLY', e['epoch'])
                     print()
+                    break
         stats_json = json.dumps(stats)
-        with open('resources/stats_avgtemp.json', 'w') as f:
+        with open('test/resources/stats_avgtemp.json', 'w') as f:
             f.write(stats_json)
 
 

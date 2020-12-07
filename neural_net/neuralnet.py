@@ -170,10 +170,6 @@ class NeuralNet:
         # calculate desired changes for each feed
         mse = 0.00
         for i, d_o in mini_batch:
-            # check if i and d_o are both vectors of the same length
-            if i.shape != d_o.shape:
-                raise NeuralNetException(
-                    f'{i.shape} is not the same as {d_o.shape}')
             cost_delta_grad_dict = self._get_cost_gradient(i, d_o)
             w_grad = [gw+dgw for gw,
                       dgw in zip(w_grad, cost_delta_grad_dict['w grad'])]
@@ -215,14 +211,15 @@ class NeuralNet:
         """
         len_training_data = len(labeled_training_dataset)
         len_test_data = len(labeled_test_dataset)
-        for e in range(no_epochs):
+        e = 0
+        while True if isinstance(no_epochs, bool) else range(no_epochs):
             random.shuffle(labeled_training_dataset)
             mini_batches = [labeled_training_dataset[i:i+mini_batch_size]
                             for i in range(0, len_training_data, mini_batch_size)]
             # train 
-            train_mse = 0.00 # TODO: this metric might not be necessary anymore, delete?
+            train_mse = 0.00
             for mini_batch in mini_batches:
-                train_mse = self._update_weights_and_biases(
+                train_mse += self._update_weights_and_biases(
                     mini_batch, learning_rate)
 
 
@@ -232,10 +229,11 @@ class NeuralNet:
                 test_mse += self.feed_forward_performance(i, self.a_functions[-1](do))
             yield {
                 'epoch': e,
-                'train mse': train_mse,
+                'train mse': train_mse/len(labeled_training_dataset),
                 'test mse': test_mse/len(labeled_test_dataset),
                 'state': self
             }
+            e += 1
 
     def learn(self, labeled_training_dataset: list, no_epochs: int, mini_batch_size: int, learning_rate: float) -> None:
         """
@@ -253,7 +251,8 @@ class NeuralNet:
 
     def feed_forward_performance(self, input_vec: np.ndarray, desired_output_vec: np.ndarray) -> float:
         """
-        return mse (TODO: implement for arbitrary error function) of one forward feed
+        return mse
+        TODO future: implement for arbitrary error function) of one forward feed
         """
         output_vec = self.feed_forward(input_vec)['a']
         return NeuralNet.cost_feed(output_vec, desired_output_vec)
@@ -272,4 +271,28 @@ class NeuralNet:
 
     @staticmethod
     def normalize(z: np.ndarray) -> np.ndarray:
-        return z * 1.0/z.max()
+        return z * 1.0/np.nanmax(z)
+
+
+    def linear_interpolation(series: np.ndarray) -> np.ndarray:
+        nans, x = NeuralNet._nan_helper(series)
+        series[nans] = np.interp(x(nans), x(~nans), series[~nans])
+        return series
+
+    @staticmethod
+    def _nan_helper(y):
+        """Helper to handle indices and logical indices of NaNs.
+
+        Input:
+            - y, 1d numpy array with possible NaNs
+        Output:
+            - nans, logical indices of NaNs
+            - index, a function, with signature indices= index(logical_indices),
+              to convert logical indices of NaNs to 'equivalent' indices
+        Example:
+            >>> # linear interpolation of NaNs
+            >>> nans, x= nan_helper(y)
+            >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+        """
+
+        return np.isnan(y), lambda z: z.nonzero()[0]
