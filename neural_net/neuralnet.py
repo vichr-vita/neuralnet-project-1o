@@ -1,7 +1,9 @@
+from operator import le
 import numpy as np
 import random
 import pickle
 import neural_net.activation_functions as af
+import itertools
 
 
 class NeuralNetException(Exception):
@@ -296,3 +298,86 @@ class NeuralNet:
         """
 
         return np.isnan(y), lambda z: z.nonzero()[0]
+
+
+
+class CompetitiveNeuralNet:
+    def __init__(self, layerin_size, layerout_size, initialize=True) -> None:
+        self.layer_sizes = [layerin_size, layerout_size]
+        # self.biases = [np.zeros(x) for x in self.layer_sizes[1:]]
+        self.weights = [np.zeros(el) for el in zip(
+            self.layer_sizes[1:], self.layer_sizes[:-1])]
+
+        # self.a_functions = [af.linear, af.linear]
+
+        if initialize:
+            self._initialize_weights()
+            # self._initialize_biases()
+
+    def kohonen_rule(self, learning_rate, winning_neuron_index, input_vec):
+        for j in range(input_vec.shape[0]):
+            # self.weights[0]... only one layer, TODO future multilayer implementation
+            self.weights[0][winning_neuron_index][j] = learning_rate * (input_vec[j] - self.weights[0][winning_neuron_index][j])
+        
+    def get_winning_neuron_index(self, input_vec):
+        a = np.dot(self.weights, input_vec)
+        return np.argmax(a)
+
+
+    def _initialize_weights(self, type=None):
+        """
+        initialize weights in the network to a random number
+        TODO: choose the initialization method in the future
+        """
+        self.weights = [np.random.rand(*w.shape) for w in self.weights]
+
+
+    @staticmethod
+    def centroid(vectors: np.ndarray):
+        """
+        take x n-vectors (a cluster) and calculate the centroid vector
+        """
+        # length = vectors.shape[0]
+        # vec_sum = np.sum(vectors, axis=0)
+        return np.divide(np.sum(vectors, axis = 0), vectors.shape[0])
+
+    @staticmethod
+    def centroid_distance(vectors: np.ndarray):
+        """
+        take x n_vectors (a cluster) and canculate mean euclidean distance from the centroid
+        serves as a diameter of the cluster
+        """
+        dist_sum = 0
+        for v in vectors:
+            dist_sum += np.linalg.norm(v - CompetitiveNeuralNet.centroid(vectors)) # euclidean distance from the centroid (absolute value)
+        return dist_sum/vectors.shape[0]
+
+    
+    @staticmethod
+    def dunn_index(clusters: list):
+        """
+        delta: compares distances of all clusters pairwise and selects the smallest one
+        Delta: compares all mean centroid distances by clusters and selects the largest one
+
+        """
+        dist_min = float('inf')
+        for cluster_pair in itertools.combinations(clusters, 2): # for n clusters we need all pairs -> nC2
+            dist = np.linalg.norm(cluster_pair[0] - cluster_pair[1])
+            dist_min = dist if dist < dist_min else dist_min
+
+        diameter_max = float('-inf') 
+        for cluster in clusters:
+            diameter = CompetitiveNeuralNet.centroid_distance(cluster)
+            diameter_max = diameter if diameter > diameter_max else diameter_max
+
+        return dist_min/diameter_max
+
+
+    def learn(self, input_dataset, no_epochs, learning_rate):
+        while True if isinstance(no_epochs, bool) else range(no_epochs):
+            classifications = [] # in the end, those will be cluster labels, zipped with the input
+            for input_vec in input_dataset:
+                self.kohonen_rule(learning_rate=learning_rate, winning_neuron_index=self.get_winning_neuron_index(input_vec), input_vec=input_vec) # weights update
+
+
+

@@ -7,7 +7,7 @@ import json
 import csv
 
 from numpy.core.arrayprint import _leading_trailing
-from neural_net.neuralnet import NeuralNet, NeuralNetException
+from neural_net.neuralnet import NeuralNet, CompetitiveNeuralNet, NeuralNetException
 import neural_net.activation_functions as af
 
 
@@ -181,23 +181,36 @@ class NeuralNetTestCase(unittest.TestCase):
             f.write(stats_json)
 
 
+    def test_centroid(self):
+        """
+        cluster: set of vectors with the same label
+        """
+        cluster = np.random.randn(10, 12)
+        print(cluster)
+        print()
+        c = CompetitiveNeuralNet.centroid(cluster)
+        print(c)
+        dist = CompetitiveNeuralNet.centroid_distance(cluster)
+        print(dist)
+
+    def test_dunn(self):
+        clusters = [np.random.randn(2, 3) for x in range(10)]
+        d = CompetitiveNeuralNet.dunn_index(clusters)
+        print(d)
 
 
+    def test_clustering(self):
+        vec_len = 5
+        input_vec = np.random.rand(vec_len)
+        cnn = CompetitiveNeuralNet(5, 3)
+        print(cnn.weights) # [from, to]
+        # print(input_vec.shape[0])
+        winner = cnn.get_winning_neuron_index(input_vec)
+        print(winner)
+        cnn.kohonen_rule(0.5 , winner, input_vec)
+        print(cnn.weights)
 
-        # neurons = [100, 3]
-        # epochs = [10, 3]
-        # learning_rates = [0.1, 0.05]
 
-        # params = itertools.product(neurons, epochs, learning_rates)
-        # print() # format so the print does not interfere with other test prints
-        # for p in params:
-        #     mse_list = []
-        #     nn = NeuralNet([1, p[0], 1], a_functions=[af.sigmoid, af.sigmoid], a_functions_prime=[af.sigmoid_prime, af.sigmoid_prime])
-        #     print(p)
-        #     for e in nn.gradient_descent_testdata(labeled_training_dataset=training_data, labeled_test_dataset=test_data, no_epochs=p[1], mini_batch_size=1, learning_rate=p[2]):
-        #         print('EPOCH: {}\ttest mse: {}'.format(e['epoch'], e['test mse']), end='\r')
-        #         mse_list.append(e['test mse'])
-        #     print()
 
 
 
