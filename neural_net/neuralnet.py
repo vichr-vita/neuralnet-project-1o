@@ -214,7 +214,7 @@ class NeuralNet:
         len_training_data = len(labeled_training_dataset)
         len_test_data = len(labeled_test_dataset)
         e = 0
-        while True if isinstance(no_epochs, bool) else range(no_epochs):
+        while True if isinstance(no_epochs, bool) else e < no_epochs:
             random.shuffle(labeled_training_dataset)
             mini_batches = [labeled_training_dataset[i:i+mini_batch_size]
                             for i in range(0, len_training_data, mini_batch_size)]
@@ -337,6 +337,8 @@ class CompetitiveNeuralNet:
         """
         take x n-vectors (a cluster) and calculate the centroid vector
         """
+        if isinstance(vectors, list):
+            vectors = np.array(vectors)
         # length = vectors.shape[0]
         # vec_sum = np.sum(vectors, axis=0)
         return np.divide(np.sum(vectors, axis = 0), vectors.shape[0])
@@ -347,6 +349,8 @@ class CompetitiveNeuralNet:
         take x n_vectors (a cluster) and canculate mean euclidean distance from the centroid
         serves as a diameter of the cluster
         """
+        if isinstance(vectors, list):
+            vectors = np.array(vectors)
         dist_sum = 0
         for v in vectors:
             dist_sum += np.linalg.norm(v - CompetitiveNeuralNet.centroid(vectors)) # euclidean distance from the centroid (absolute value)
@@ -362,7 +366,8 @@ class CompetitiveNeuralNet:
         """
         dist_min = float('inf')
         for cluster_pair in itertools.combinations(clusters, 2): # for n clusters we need all pairs -> nC2
-            dist = np.linalg.norm(cluster_pair[0] - cluster_pair[1])
+            # dist = np.linalg.norm(cluster_pair[0] - cluster_pair[1])
+            dist = np.linalg.norm(CompetitiveNeuralNet.centroid(cluster_pair[0]) - CompetitiveNeuralNet.centroid(cluster_pair[1]))
             dist_min = dist if dist < dist_min else dist_min
 
         diameter_max = float('-inf') 
@@ -373,11 +378,24 @@ class CompetitiveNeuralNet:
         return dist_min/diameter_max
 
 
-    def learn(self, input_dataset, no_epochs, learning_rate):
-        while True if isinstance(no_epochs, bool) else range(no_epochs):
-            classifications = [] # in the end, those will be cluster labels, zipped with the input
+    def cluster(self, input_dataset: list, no_epochs, learning_rate):
+        e = 0
+        labeled_input_dataset = {cluster_no: [] for cluster_no in range(self.layer_sizes[-1])}
+        while True if isinstance(no_epochs, bool) else e < no_epochs:
             for input_vec in input_dataset:
-                self.kohonen_rule(learning_rate=learning_rate, winning_neuron_index=self.get_winning_neuron_index(input_vec), input_vec=input_vec) # weights update
+                winner = self.get_winning_neuron_index(input_vec)
+                self.kohonen_rule(learning_rate=learning_rate, winning_neuron_index=winner, input_vec=input_vec) # weights update
+                labeled_input_dataset[winner].append(input_vec)
+            dunn = CompetitiveNeuralNet.dunn_index(labeled_input_dataset.values())
 
-
+            yield {
+                'labeled dataset' : labeled_input_dataset,
+                'dunn index': dunn,
+                'epoch': e
+                }
+            # yield labeled_input_dataset
+            
+            e += 1
+        # calculate dunn index for clusters
+        # dunn_index = CompetitiveNeuralNet.dunn_index()
 

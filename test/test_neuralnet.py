@@ -201,16 +201,10 @@ class NeuralNetTestCase(unittest.TestCase):
 
     def test_clustering(self):
         vec_len = 5
-        input_vec = np.random.rand(vec_len)
+        input_dataset = [np.random.rand(vec_len) for x in range(1000)]
         cnn = CompetitiveNeuralNet(5, 3)
-        print(cnn.weights) # [from, to]
-        # print(input_vec.shape[0])
-        winner = cnn.get_winning_neuron_index(input_vec)
-        print(winner)
-        cnn.kohonen_rule(0.5 , winner, input_vec)
-        print(cnn.weights)
-
-
+        for e in cnn.cluster(input_dataset=input_dataset, no_epochs=100, learning_rate=0.05):
+            print(e['dunn index'])
 
 
 
